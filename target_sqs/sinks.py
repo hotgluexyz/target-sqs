@@ -2,6 +2,7 @@
 
 
 import logging
+import uuid
 
 import boto3
 from botocore.exceptions import ClientError
@@ -14,7 +15,6 @@ class SQSSink(BatchSink):
     """SQS target sink class."""
 
     sqs = None
-    messages = []
     max_size = 10000  # Max records to write in one batch
 
     def get_sqs(self):
@@ -26,15 +26,6 @@ class SQSSink(BatchSink):
                 region_name=self.config.get("aws_region", "us-east-1"),
             )
         return self.sqs
-
-    def process_record(self, record: dict, context: dict) -> None:
-        if self.stream_name == "send_messages":
-            message = {"body": record["body"]}
-            if "attributes" in record:
-                message.update({"attributes": record["attributes"]})
-            else:
-                message.update({"attributes": {}})
-            self.messages.append(message)
 
     def get_queue(self, name):
         sqs = self.get_sqs()
@@ -52,11 +43,10 @@ class SQSSink(BatchSink):
         try:
             entries = [
                 {
-                    "Id": str(ind),
-                    "MessageBody": msg["body"],
-                    "MessageAttributes": msg["attributes"],
+                    "Id": str(uuid.uuid4()),
+                    "MessageBody": msg
                 }
-                for ind, msg in enumerate(messages)
+                for msg in messages
             ]
             response = queue.send_messages(Entries=entries)
             if "Successful" in response:
@@ -80,5 +70,4 @@ class SQSSink(BatchSink):
             return response
 
     def process_batch(self, context: dict) -> None:
-        if self.stream_name == "send_messages":
-            self.send_messages(self.messages)
+        self.send_messages(context.get("records"))
