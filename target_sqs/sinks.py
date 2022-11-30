@@ -45,7 +45,7 @@ class SQSSink(BatchSink):
             entries = [
                 {
                     "Id": str(uuid.uuid4()),
-                    "MessageBody": json.dumps(msg)
+                    "MessageBody": json.dumps(msg, default=str)
                 }
                 for msg in messages
             ]
