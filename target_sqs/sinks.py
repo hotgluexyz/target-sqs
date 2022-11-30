@@ -50,20 +50,18 @@ class SQSSink(BatchSink):
                 for msg in messages
             ]
             response = queue.send_messages(Entries=entries)
+
+            # Check response
             if "Successful" in response:
-                for msg_meta in response["Successful"]:
-                    logger.info(
-                        "Message sent: %s: %s",
-                        msg_meta["MessageId"],
-                        messages[int(msg_meta["Id"])]["body"],
-                    )
+                logger.info(
+                    "Successfully sent %s messages",
+                    len(response["Successful"])
+                )
             if "Failed" in response:
-                for msg_meta in response["Failed"]:
-                    logger.warning(
-                        "Failed to send: %s: %s",
-                        msg_meta["MessageId"],
-                        messages[int(msg_meta["Id"])]["body"],
-                    )
+                logger.warning(
+                    "Failed to send %s messages",
+                    len(response["Failed"])
+                )
         except ClientError as error:
             logger.exception("Send messages failed to queue: %s", queue)
             raise error
