@@ -5,6 +5,7 @@ import logging
 import uuid
 
 import boto3
+import json
 from botocore.exceptions import ClientError
 from singer_sdk.sinks import BatchSink
 
@@ -44,7 +45,7 @@ class SQSSink(BatchSink):
             entries = [
                 {
                     "Id": str(uuid.uuid4()),
-                    "MessageBody": msg
+                    "MessageBody": json.dumps(msg)
                 }
                 for msg in messages
             ]
