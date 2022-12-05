@@ -50,8 +50,8 @@ class SQSSink(BatchSink):
                     "MessageBody": json.dumps(msg, default=str)
                 }
 
-                if self.config.get("group_id") is not None:
-                    entry["MessageGroupId"] = self.config.get("group_id")
+                if self.config.get("path_prefix") is not None:
+                    entry["MessageGroupId"] = self.config.get("path_prefix")
 
                 entries.append(entry)
 
