@@ -45,13 +45,16 @@ class SQSSink(BatchSink):
             # Create the entries
             entries = []
             for msg in messages:
+                entry_id = str(uuid.uuid4())
+
                 entry = {
-                    "Id": str(uuid.uuid4()),
+                    "Id": entry_id,
                     "MessageBody": json.dumps(msg, default=str)
                 }
 
                 if self.config.get("path_prefix") is not None:
                     entry["MessageGroupId"] = self.config.get("path_prefix")
+                    entry["MessageDeduplicationId"] = entry_id
 
                 entries.append(entry)
 
