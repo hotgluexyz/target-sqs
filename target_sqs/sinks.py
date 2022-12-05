@@ -42,13 +42,20 @@ class SQSSink(BatchSink):
     def send_messages(self, messages):
         queue = self.get_queue(self.config.get("queue_name"))
         try:
-            entries = [
-                {
+            # Create the entries
+            entries = []
+            for msg in messages:
+                entry = {
                     "Id": str(uuid.uuid4()),
                     "MessageBody": json.dumps(msg, default=str)
                 }
-                for msg in messages
-            ]
+
+                if self.config.get("group_id") is not None:
+                    entry["MessageGroupId"] = self.config.get("group_id")
+
+                entries.append(entry)
+
+            # Send the messages
             response = queue.send_messages(Entries=entries)
 
             # Check response
