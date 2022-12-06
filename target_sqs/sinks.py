@@ -16,7 +16,7 @@ class SQSSink(BatchSink):
     """SQS target sink class."""
 
     sqs = None
-    max_size = 10000  # Max records to write in one batch
+    max_size = 10  # Max records to write in one batch
 
     def get_sqs(self):
         if self.sqs is None:
