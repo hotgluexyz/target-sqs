@@ -46,6 +46,8 @@ class SQSSink(BatchSink):
             entries = []
             for msg in messages:
                 entry_id = str(uuid.uuid4())
+                # Inject the stream name
+                msg['stream'] = self.stream_name
 
                 entry = {
                     "Id": entry_id,
