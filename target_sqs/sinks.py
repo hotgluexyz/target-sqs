@@ -8,9 +8,10 @@ import boto3
 import json
 from botocore.exceptions import ClientError
 from singer_sdk.sinks import BatchSink
+import sys
 
 logger = logging.getLogger(__name__)
-
+MAX_SIZE_IN_BYTES = 262_144
 
 class SQSSink(BatchSink):
     """SQS target sink class."""
@@ -38,7 +39,25 @@ class SQSSink(BatchSink):
             raise error
         else:
             return queue
+    def check_response(self,response):
+        if "Successful" in response:
+            logger.info(
+                "Successfully sent %s messages",
+                len(response["Successful"])
+            )
+        if "Failed" in response:
+            logger.warning(
+                "Failed to send %s messages",
+                len(response["Failed"])
+            )
+            raise ClientError
 
+    def get_size(self,obj):
+        total_size = 0 
+        for o in obj: 
+            for key in o.keys():
+                total_size += sys.getsizeof(o[key])
+        return total_size 
     def send_messages(self, messages):
         queue = self.get_queue(self.config.get("queue_name"))
         try:
@@ -57,23 +76,23 @@ class SQSSink(BatchSink):
                 if self.config.get("path_prefix") is not None:
                     entry["MessageGroupId"] = self.config.get("path_prefix")
                     entry["MessageDeduplicationId"] = entry_id
-
                 entries.append(entry)
 
             # Send the messages
-            response = queue.send_messages(Entries=entries)
+            total_size = self.get_size(entries)
+            if total_size > MAX_SIZE_IN_BYTES:
+                n_batches = (total_size // MAX_SIZE_IN_BYTES) + 1 
+                step = len(entries) // n_batches
+                for i in range(0,len(entries),step):
+                    batch = entries[i:i+step]
+                    response = queue.send_messages(Entries=batch)
+                    self.check_response(response)
+            else: 
+                print("Not under size")
+                response = queue.send_messages(Entries=entries)
+                self.check_response(response)
 
             # Check response
-            if "Successful" in response:
-                logger.info(
-                    "Successfully sent %s messages",
-                    len(response["Successful"])
-                )
-            if "Failed" in response:
-                logger.warning(
-                    "Failed to send %s messages",
-                    len(response["Failed"])
-                )
         except ClientError as error:
             logger.exception("Send messages failed to queue: %s", queue)
             raise error
