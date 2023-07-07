@@ -54,10 +54,17 @@ class SQSSink(BatchSink):
 
     def get_size(self,obj):
         total_size = 0 
-        for o in obj: 
-            for key in o.keys():
-                total_size += sys.getsizeof(o[key])
-        return total_size 
+        if type(obj) == list:
+            for o in obj: 
+                for key in o.keys():
+                    total_size += sys.getsizeof(o[key])
+            return total_size 
+        elif type(obj) == dict:
+            for key in obj.keys():
+                total_size += sys.getsizeof(obj[key])
+            
+            return total_size
+
     def send_messages(self, messages):
         queue = self.get_queue(self.config.get("queue_name"))
         try:
@@ -80,15 +87,23 @@ class SQSSink(BatchSink):
 
             # Send the messages
             total_size = self.get_size(entries)
+            
+            # if size of all entries 
             if total_size > MAX_SIZE_IN_BYTES:
-                n_batches = (total_size // MAX_SIZE_IN_BYTES) + 1 
-                step = len(entries) // n_batches
-                for i in range(0,len(entries),step):
-                    batch = entries[i:i+step]
-                    response = queue.send_messages(Entries=batch)
-                    self.check_response(response)
+                batch = []
+                for entry in entries: 
+                    if self.get_size(batch) + self.get_size(entry) > MAX_SIZE_IN_BYTES:
+                        # if current entry will tip over edge, flush current batch and add current entry in for next iterations
+                        response = queue.send_messages(Entries=batch)
+                        self.check_response(response)
+                        logger.info(f"Sending batch of size {self.get_size(batch)} : {len(batch)} records")
+                        batch = [entry]
+                    else:
+                        batch.append(entry)
+                logger.info(f"Sending batch of size {self.get_size(batch)} : {len(batch)} records")
+                response = queue.send_messages(Entries=batch)
             else: 
-                print("Not under size")
+                logger.info(f"Sending all entries in one message with size {total_size} : {len(entries)} records")
                 response = queue.send_messages(Entries=entries)
                 self.check_response(response)
 
@@ -100,4 +115,4 @@ class SQSSink(BatchSink):
             return response
 
     def process_batch(self, context: dict) -> None:
-        self.send_messages(context.get("records"))
+       self.send_messages(context.get("records"))
