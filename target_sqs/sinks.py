@@ -1,6 +1,6 @@
 """SQS target sink class, which handles writing streams."""
 
-
+import os
 import logging
 import uuid
 
@@ -74,6 +74,9 @@ class SQSSink(BatchSink):
                 entry_id = str(uuid.uuid4())
                 # Inject the stream name
                 msg['stream'] = self.stream_name
+
+                if self.config.get("include_job_id", False):
+                    msg['job_id'] = os.environ.get('JOB_ID')
 
                 entry = {
                     "Id": entry_id,
