@@ -40,6 +40,10 @@ class SQSSink(BatchSink):
         else:
             return queue
     def check_response(self,response):
+        logger.info(
+                "SQS Response: %s",
+                response
+            )
         if "Successful" in response:
             logger.info(
                 "Successfully sent %s messages",
@@ -50,7 +54,21 @@ class SQSSink(BatchSink):
                 "Failed to send %s messages",
                 len(response["Failed"])
             )
-            raise ClientError
+        #For now logging error. Will fail job if required.    
+        if "Error" in response:
+            if "Message" in response['Error']:
+                logger.warning(
+                    "Message not with message:  %s",
+                    len(response['Error']["Message"])
+                )
+            if "Code" in response['Error']:
+                logger.warning(
+                    "ErrorCode:  %s",
+                    len(response['Error']["Code"])
+                )
+            if "Code" and "Message" in response:
+                raise Exception(f"Error sending message: {response['Error']['Code']} - {response['Error']['Message']}")
+
 
     def get_size(self,obj):
         total_size = 0 
