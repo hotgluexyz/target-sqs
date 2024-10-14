@@ -101,7 +101,8 @@ class SQSSink(BatchSink):
                     "MessageBody": json.dumps(msg, default=str)
                 }
 
-                if self.config.get("path_prefix") is not None:
+                queue_type = queue.url.split(".")[-1]
+                if self.config.get("path_prefix") is not None and queue_type == "fifo":
                     entry["MessageGroupId"] = self.config.get("path_prefix")
                     entry["MessageDeduplicationId"] = entry_id
                 entries.append(entry)
